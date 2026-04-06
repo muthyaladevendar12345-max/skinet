@@ -1,3 +1,4 @@
+using API.RequestHelpers;
 using Core.Entities;
 using Core.Interfaces;
 using Core.Specifications;
@@ -8,18 +9,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ProductsController(IGenericRepository<Product> productRepository) : ControllerBase
+
+    public class ProductsController(IGenericRepository<Product> productRepository) : BaseApiController
     {
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts(string? brand,string? type,
-        string? sort)
+        public async Task<IActionResult> GetProducts(
+            [FromQuery] ProductSpecParams specParams)
         {
-           var spec=new ProductSpecification(brand,type,sort);
-           var products=await productRepository.ListAsync(spec);
-            return Ok(products);
+            var spec = new ProductSpecification(specParams);
+            return await CreatePagedResult(productRepository, spec, specParams.PageIndex, specParams.PageSize);
         }
 
         [HttpGet("{id:int}")]
@@ -50,11 +49,11 @@ namespace API.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateProduct(int id, Product product)
         {
-            if(product.Id!=id || !ProductExists(id))
+            if (product.Id != id || !ProductExists(id))
             {
                 return BadRequest();
             }
-             productRepository.Update(product);
+            productRepository.Update(product);
             if (await productRepository.SaveAllAsync())
             {
                 return NoContent();
@@ -62,7 +61,7 @@ namespace API.Controllers
 
             return BadRequest();
 
-        }   
+        }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteProduct(int id)
@@ -75,7 +74,7 @@ namespace API.Controllers
 
             productRepository.Remove(product);
 
-           if (await productRepository.SaveAllAsync())
+            if (await productRepository.SaveAllAsync())
             {
                 return NoContent();
             }
@@ -85,23 +84,23 @@ namespace API.Controllers
         [HttpGet("brands")]
         public async Task<ActionResult<IEnumerable<string>>> GetBrands()
         {
-            var spec=new BrandListSpecification();
-            var brands=await productRepository.ListAsync(spec);
+            var spec = new BrandListSpecification();
+            var brands = await productRepository.ListAsync(spec);
             return Ok(brands);
         }
 
         [HttpGet("types")]
         public async Task<ActionResult<IEnumerable<string>>> GetTypes()
         {
-            var spec=new TypeListSpecification();
-            var types=await productRepository.ListAsync(spec);
+            var spec = new TypeListSpecification();
+            var types = await productRepository.ListAsync(spec);
             return Ok(types);
         }
 
         private bool ProductExists(int id)
         {
             return productRepository.Exists(id);
-        }        
+        }
 
     }
 }
